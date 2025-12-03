@@ -38,6 +38,10 @@
    - [`unsubscribe_from_joint_state`](#meduunsubscribe_from_joint_state)
 8. [Чтение I²C](#8-чтение-i²c)
    - [`get_i2c_value`](#meduget_i2c_value)
+9. [Минимальные рабочие примеры](#9-минимальные-рабочие-примеры)
+   - [Общая часть: подключение](#общая-часть-подключение)
+   - [Примеры по функциям](#примеры-по-функциям)
+   - [Асинхронные примеры](#асинхронные-примеры)
 
 ---
 
@@ -148,18 +152,6 @@ def move_to_angles(
 **Возвращаемое значение:**  
 `None`. При успешном завершении просто возвращается.
 
-**Пример использования:**
-
-```python
-medu.move_to_angles(
-    povorot_osnovaniya=0.0,
-    privod_plecha=0.5,
-    privod_strely=-0.5,
-    velocity_factor=0.3,
-    acceleration_factor=0.3,
-)
-```
-
 ---
 
 ### `MEdu.move_to_angles_async`
@@ -184,21 +176,6 @@ async def move_to_angles_async(
 **Назначение:**  
 Асинхронная версия `move_to_angles`. Позволяет интегрировать управление в `asyncio`-приложения.
 
-**Особенности:**
-
-- Команда отправляется и ожидается через `await command.promise.async_result()`.
-- Интерфейс параметров полностью совпадает с синхронным методом.
-
-**Пример:**
-
-```python
-await medu.move_to_angles_async(
-    povorot_osnovaniya=0.0,
-    privod_plecha=0.5,
-    privod_strely=-0.5,
-)
-```
-
 ---
 
 ### `MEdu.move_to_angles_async_await`
@@ -210,7 +187,7 @@ async def move_to_angles_async_await(
     privod_plecha: float,
     privod_strely: float,
     v_osnovaniya: float = 0.0,
-    v_plecha: float = 0.0,
+    v_pleча: float = 0.0,
     v_strely: float = 0.0,
     velocity_factor: float = 0.1,
     acceleration_factor: float = 0.1,
@@ -222,9 +199,6 @@ async def move_to_angles_async_await(
 
 **Назначение:**  
 Тонкая обёртка над `move_to_angles_async`, которая просто вызывает `await self.move_to_angles_async(...)`.
-
-**Использование:**  
-Аналогично `move_to_angles_async`. Добавлена для унификации API.
 
 ---
 
@@ -248,11 +222,6 @@ def move_to_angles_no_wait(
 **Назначение:**  
 Отправка команды движения по суставам **без ожидания** её выполнения.
 
-**Особенности:**
-
-- Состояние выполнения не контролируется этим методом.
-- Полезно при потоковом управлении, когда состояние отслеживается по обратной связи.
-
 ---
 
 ## 3. Питание наконечника
@@ -273,19 +242,6 @@ def nozzle_power(
 Включение/выключение питания на наконечнике (стреле) манипулятора.  
 Питание необходимо для работы гриппера и вакуумного захвата.
 
-**Параметры:**
-
-- `power`: `True` — включить питание, `False` — выключить.
-- `timeout_seconds`: таймаут ожидания подтверждения.
-- `throw_error`: выбрасывать ли исключение при ошибке.
-
-**Пример:**
-
-```python
-medu.nozzle_power(True)   # включить питание
-medu.nozzle_power(False)  # выключить питание
-```
-
 ---
 
 ### `MEdu.nozzle_power_async`
@@ -300,7 +256,7 @@ async def nozzle_power_async(
     ...
 ```
 
-Асинхронная версия `nozzle_power`. Параметры и логика аналогичны, используется `await command.promise.async_result()`.
+Асинхронная версия `nozzle_power`.
 
 ---
 
@@ -313,9 +269,6 @@ def nozzle_power_no_wait(self, power: bool) -> None:
 
 **Назначение:**  
 Включение/выключение питания без ожидания результата.
-
-- Использует неблокирующую команду (`NoWaitCommand`).
-- Не возвращает информацию об успехе/ошибке.
 
 ---
 
@@ -337,18 +290,6 @@ def manage_gripper(
 **Назначение:**  
 Управление поворотом насадки и сжатием гриппера (блокирующее).
 
-**Параметры:**
-
-- `rotation`: угол поворота насадки (градусы), или `None`, если не изменяем.
-- `gripper`: угол/степень сжатия гриппера (градусы), или `None`.
-- `timeout_seconds`: таймаут ожидания результата.
-- `throw_error`: выбрасывать ли исключение при ошибке.
-
-**Важно:**
-
-- Нельзя вызывать с `rotation is None` и `gripper is None` одновременно — будет `ValueError`.
-- Для работы должен быть включён `nozzle_power(True)`.
-
 ---
 
 ### `MEdu.manage_gripper_async`
@@ -364,10 +305,7 @@ async def manage_gripper_async(
     ...
 ```
 
-Асинхронная версия `manage_gripper`:
-
-- Проверяет, что не оба аргумента `None`.
-- Отправляет команду и ожидает `await command.promise.async_result()`.
+Асинхронная версия `manage_gripper`.
 
 ---
 
@@ -384,11 +322,6 @@ def manage_gripper_no_wait(
 
 **Назначение:**  
 Отправка команды управления гриппером без ожидания результата.
-
-**Особенности:**
-
-- При `rotation is None` и `gripper is None` → `ValueError`.
-- Используется `NoWaitCommand` с типом `"gripper_control"`.
 
 ---
 
@@ -410,18 +343,6 @@ def manage_vacuum(
 **Назначение:**  
 Управление вакуумным захватом и поворотом его насадки (блокирующее).
 
-**Параметры:**
-
-- `rotation`: угол поворота насадки (градусы) или `None`.
-- `power_supply`: `True` — включить вакуум; `False` — выключить; `None` — не менять.
-- `timeout_seconds`: таймаут ожидания результата.
-- `throw_error`: выбрасывать ли исключение при ошибке.
-
-**Ограничения:**
-
-- Если `rotation is None` и `power_supply is None` — выбрасывается `ValueError`.
-- Требуется включённое питание (`nozzle_power(True)`).
-
 ---
 
 ### `MEdu.manage_vacuum_async`
@@ -437,10 +358,7 @@ async def manage_vacuum_async(
     ...
 ```
 
-Асинхронная версия `manage_vacuum`:
-
-- Аналогична по параметрам и проверкам.
-- Завершение ожидается через `await command.promise.async_result()`.
+Асинхронная версия `manage_vacuum`.
 
 ---
 
@@ -457,11 +375,6 @@ def manage_vacuum_no_wait(
 
 **Назначение:**  
 Управление вакуумом без ожидания результата.
-
-**Особенности:**
-
-- Нельзя вызывать с обоими параметрами `None` — `ValueError`.
-- Отправляет `NoWaitCommand` с типом `"vacuum_control"`.
 
 ---
 
@@ -485,22 +398,6 @@ def stream_joint_angles(
 **Назначение:**  
 Разовая «стриминговая» отправка углов и скоростей суставов.
 
-**Параметры:**
-
-- `povorot_osnovaniya`: угол основания, рад.
-- `privod_plecha`: угол плеча, рад.
-- `privod_strely`: угол стрелы, рад.
-- `v_osnovaniya`: скорость основания, рад/с.
-- `v_plecha`: скорость плеча, рад/с.
-- `v_strely`: скорость стрелы, рад/с.
-
-**Поведение:**  
-Формируются словари `positions` и `velocities`, далее вызывается метод базового класса:
-
-```python
-self.stream_joint_positions(positions, velocities)
-```
-
 ---
 
 ### `MEdu.stream_joint_angles_async`
@@ -518,14 +415,7 @@ async def stream_joint_angles_async(
     ...
 ```
 
-Асинхронная версия:
-
-- Параметры те же.
-- Внутри вызывает:
-
-```python
-await self.stream_joint_positions_async(positions, velocities)
-```
+Асинхронная версия стриминга углов.
 
 ---
 
@@ -541,18 +431,6 @@ def subscribe_to_joint_state(self, callback: Callable[[dict], None]) -> None:
 **Назначение:**  
 Подписка на обновления состояния суставов манипулятора.
 
-**Параметры:**
-
-- `callback`: функция вида `callback(data: dict)`, где `data` — словарь, полученный из JSON-сообщения по теме `JOINT_INFO_TOPIC` (например, углы, скорости, состояния приводов).
-
-**Поведение:**
-
-- Сохраняет колбэк в `self.joint_state_callback`.
-- Подписывается на `JOINT_INFO_TOPIC` через `self.message_bus`.
-
-**Когда вызывается callback:**  
-Каждый раз, когда `process_message` получает сообщение по `JOINT_INFO_TOPIC`.
-
 ---
 
 ### `MEdu.unsubscribe_from_joint_state`
@@ -564,11 +442,6 @@ def unsubscribe_from_joint_state(self) -> None:
 
 **Назначение:**  
 Отписка от получения обновлений состояния суставов.
-
-**Поведение:**
-
-- Очищает `self.joint_state_callback`.
-- Делает `self.message_bus.unsubscribe(JOINT_INFO_TOPIC)`.
 
 ---
 
@@ -589,22 +462,283 @@ def get_i2c_value(
 **Назначение:**  
 Синхронное чтение значения по I²C-каналу по имени.
 
-**Параметры:**
+---
 
-- `name`: строковое имя канала/датчика.
-- `timeout_seconds`: таймаут ожидания ответа.
-- `throw_error`: выбрасывать ли исключение при ошибке.
+## 9. Минимальные рабочие примеры
 
-**Возвращаемое значение:**
-
-- Значение `float` из поля `data.value` ответа команды, либо `None`, если значение отсутствует.
-
-**Пример:**
+### Общая часть: подключение
 
 ```python
-temperature = medu.get_i2c_value("temperature_sensor")
-if temperature is not None:
-    print("Температура:", temperature)
+from sdk.manipulators.medu import MEdu
+
+HOST = "192.168.0.10"      # IP робота / брокера
+CLIENT_ID = "my_client"    # любое уникальное имя
+LOGIN = "user"             # ваш логин
+PASSWORD = "pass"          # ваш пароль
+
+medu = MEdu(HOST, CLIENT_ID, LOGIN, PASSWORD)
+medu.connect()             # установить соединение
 ```
 
 ---
+
+### Примеры по функциям
+
+#### `move_to_angles`
+
+```python
+# Повернуть манипулятор в заданные углы (в радианах)
+medu.move_to_angles(
+    povorot_osnovaniya=0.0,   # основание
+    privod_plecha=0.5,        # плечо
+    privod_strely=-0.5,       # стрела
+    velocity_factor=0.3,
+    acceleration_factor=0.3,
+)
+```
+
+#### `move_to_angles_no_wait`
+
+```python
+# Отправить команду и не ждать завершения
+medu.move_to_angles_no_wait(
+    povorot_osnovaniya=0.1,
+    privod_plecha=0.4,
+    privod_strely=-0.4,
+    velocity_factor=0.3,
+    acceleration_factor=0.3,
+)
+```
+
+#### `nozzle_power`
+
+```python
+# Включить питание на разъёмах на стреле
+medu.nozzle_power(True)
+
+# ...поработали гриппером/вакуумом...
+
+# Выключить питание
+medu.nozzle_power(False)
+```
+
+#### `nozzle_power_no_wait`
+
+```python
+# Включить питание без ожидания подтверждения
+medu.nozzle_power_no_wait(True)
+```
+
+#### `manage_gripper`
+
+```python
+# Включаем питание на стреле
+medu.nozzle_power(True)
+
+# Сжать гриппер до 30° (rotation не трогаем)
+medu.manage_gripper(
+    rotation=None,
+    gripper=30,
+)
+
+# Повернуть насадку на 90° и слегка отпустить гриппер до 10°
+medu.manage_gripper(
+    rotation=90,
+    gripper=10,
+)
+```
+
+#### `manage_gripper_no_wait`
+
+```python
+medu.nozzle_power(True)
+
+# Отправить команду на сжатие гриппера и не ждать
+medu.manage_gripper_no_wait(
+    gripper=40,
+    rotation=None,
+)
+```
+
+#### `manage_vacuum`
+
+```python
+medu.nozzle_power(True)
+
+# Включить вакуум без изменения поворота насадки
+medu.manage_vacuum(
+    rotation=None,
+    power_supply=True,
+)
+
+# Повернуть насадку вакуумного захвата на 45°, не меняя включённость насоса
+medu.manage_vacuum(
+    rotation=45,
+    power_supply=None,
+)
+
+# Выключить вакуум
+medu.manage_vacuum(
+    rotation=None,
+    power_supply=False,
+)
+```
+
+#### `manage_vacuum_no_wait`
+
+```python
+medu.nozzle_power(True)
+
+# Включить вакуум без ожидания подтверждения
+medu.manage_vacuum_no_wait(
+    rotation=None,
+    power_supply=True,
+)
+```
+
+#### `stream_joint_angles`
+
+```python
+from time import sleep
+
+# Разовая "стриминговая" команда
+medu.stream_joint_angles(
+    povorot_osnovaniya=0.0,
+    privod_plecha=0.3,
+    privod_strely=-0.3,
+    v_osnovaniya=0.2,
+    v_plecha=0.2,
+    v_strely=0.2,
+)
+
+# Пример простого цикла
+for i in range(10):
+    angle = 0.1 * i
+    medu.stream_joint_angles(
+        povorot_osnovaniya=angle,
+        privod_plecha=0.3,
+        privod_strely=-0.3,
+        v_osnovaniya=0.2,
+        v_plecha=0.2,
+        v_strely=0.2,
+    )
+    sleep(0.1)
+```
+
+#### `subscribe_to_joint_state` / `unsubscribe_from_joint_state`
+
+```python
+def on_joint_state(data: dict):
+    # data — это dict из JSON по теме JOINT_INFO_TOPIC
+    print("Состояние узлов:", data)
+
+# Подписаться на обновления
+medu.subscribe_to_joint_state(on_joint_state)
+
+# ... позже, когда подписка больше не нужна:
+medu.unsubscribe_from_joint_state()
+```
+
+#### `get_i2c_value`
+
+```python
+value = medu.get_i2c_value("temperature_sensor")
+
+if value is not None:
+    print("Температура:", value)
+else:
+    print("Датчик ничего не вернул или поле value отсутствует")
+```
+
+#### `process_message` (если пишете свой транспорт)
+
+```python
+import paho.mqtt.client as mqtt
+
+def on_message(client, userdata, msg):
+    topic = msg.topic
+    payload = msg.payload.decode("utf-8")
+    medu.process_message(topic, payload)
+
+client = mqtt.Client()
+client.on_message = on_message
+# client.connect(...), client.subscribe(...), client.loop_start() и т.д.
+```
+
+#### `_cleanup_finished_commands` (внутренний)
+
+```python
+# Принудительно почистить завершённые команды
+medu._cleanup_finished_commands()
+```
+
+---
+
+### Асинхронные примеры
+
+Асинхронные версии методов: `move_to_angles_async`, `move_to_angles_async_await`, `nozzle_power_async`, `manage_gripper_async`, `manage_vacuum_async`, `stream_joint_angles_async`.
+
+```python
+import asyncio
+from sdk.manipulators.medu import MEdu
+
+HOST = "192.168.0.10"
+CLIENT_ID = "my_client"
+LOGIN = "user"
+PASSWORD = "pass"
+
+async def main():
+    medu = MEdu(HOST, CLIENT_ID, LOGIN, PASSWORD)
+
+    # Подключение в async-режиме (если в SDK есть connect_async)
+    await medu.connect_async()
+
+    # 1) move_to_angles_async
+    await medu.move_to_angles_async(
+        povorot_osnovaniya=0.0,
+        privod_plecha=0.5,
+        privod_strely=-0.5,
+        velocity_factor=0.3,
+        acceleration_factor=0.3,
+    )
+
+    # 2) move_to_angles_async_await (обёртка над предыдущей)
+    await medu.move_to_angles_async_await(
+        povorot_osnovaniya=0.1,
+        privod_plecha=0.4,
+        privod_strely=-0.4,
+        velocity_factor=0.3,
+        acceleration_factor=0.3,
+    )
+
+    # 3) nozzle_power_async
+    await medu.nozzle_power_async(True)
+
+    # 4) manage_gripper_async
+    await medu.manage_gripper_async(
+        rotation=90,
+        gripper=20,
+    )
+
+    # 5) manage_vacuum_async
+    await medu.manage_vacuum_async(
+        rotation=None,
+        power_supply=True,
+    )
+
+    # 6) stream_joint_angles_async
+    await medu.stream_joint_angles_async(
+        povorot_osnovaniya=0.0,
+        privod_plecha=0.3,
+        privod_strely=-0.3,
+        v_osnovaniya=0.2,
+        v_plecha=0.2,
+        v_strely=0.2,
+    )
+
+    # В конце — по желанию:
+    medu.disconnect()
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
